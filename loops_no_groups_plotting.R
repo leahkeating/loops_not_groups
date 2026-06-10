@@ -31,15 +31,30 @@ theory_prob_1 <- read_delim("data/prob_loops_not_groups_nu_1.txt",
                             col_names = c("T", "p"),
                             delim = " ") |> mutate(nu = factor(1))
 
+sims_3 <- read_delim("data/logs_500000/loopsnogroups_nu_3_sims.txt",
+                     col_names = c("T", "cascade_size"),
+                     delim = " ") |> mutate(nu = factor(3)) |>
+  mutate(rho = cascade_size/500000)
+
 # A tibble with all three values for nu for the gcc size
 theory_gcc_size <- theory_size_1 |> add_row(theory_size_2) |> add_row(theory_size_3)
 
 # A tibble with all three values for nu for the gcc prob
 theory_gcc_prob <- theory_prob_1 |> add_row(theory_prob_2) |> add_row(theory_prob_3)
 
+sims <- sims_3
+
+size_sims <- sims |>
+  mutate(significant_frac = rho > 0.01) |>
+  group_by(nu, T, significant_frac) |>
+  summarise(giant_component_size = median(rho)) |>
+  group_by(nu, T) |>
+  summarise(giant_component_size = max(giant_component_size)) |> ungroup()
+
 size_plot <- theory_gcc_size |>
   ggplot() +
   geom_line(aes(x = T, y = p, color = nu)) +
+  geom_point(data = size_sims, aes(x = T, y = giant_component_size, color = nu)) +
   coord_cartesian(xlim = c(0.01, 0.4),
                   ylim = c(0,1)) +
   labs(
@@ -74,7 +89,7 @@ prob_plot <- theory_gcc_prob |>
                   ylim = c(0,1)) +
   labs(
     x = expression(T),
-    y = expression("Size"),
+    y = expression("Probability"),
     color = expression(nu),
     shape = expression(nu)
   ) +
