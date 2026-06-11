@@ -7,27 +7,51 @@ theme_set(theme_cowplot())
 
 setwd("/Users/leah/Documents/loops_not_groups")
 
-theory_size_3 <- read_delim("data/size_loops_not_groups_nu_3.txt",
+theory_size_lower_3 <- read_delim("data/size_loops_no_groups_nu_3_lower_branch.txt",
                             col_names = c("T", "p"),
                             delim = " ") |> mutate(nu = factor(3))
 
-theory_size_2 <- read_delim("data/size_loops_not_groups_nu_2.txt",
+theory_size_lower_2 <- read_delim("data/size_loops_no_groups_nu_2_lower_branch.txt",
                             col_names = c("T", "p"),
                             delim = " ") |> mutate(nu = factor(2))
 
-theory_size_1 <- read_delim("data/size_loops_not_groups_nu_1.txt",
+theory_size_lower_1 <- read_delim("data/size_loops_no_groups_nu_1_lower_branch.txt",
                             col_names = c("T", "p"),
                             delim = " ") |> mutate(nu = factor(1))
 
-theory_prob_3 <- read_delim("data/prob_loops_not_groups_nu_3.txt",
+theory_size_upper_3 <- read_delim("data/size_loops_no_groups_nu_3_upper_branch.txt",
                             col_names = c("T", "p"),
                             delim = " ") |> mutate(nu = factor(3))
 
-theory_prob_2 <- read_delim("data/prob_loops_not_groups_nu_2.txt",
+theory_size_upper_2 <- read_delim("data/size_loops_no_groups_nu_2_upper_branch.txt",
                             col_names = c("T", "p"),
                             delim = " ") |> mutate(nu = factor(2))
 
-theory_prob_1 <- read_delim("data/prob_loops_not_groups_nu_1.txt",
+theory_size_upper_1 <- read_delim("data/size_loops_no_groups_nu_1_upper_branch.txt",
+                            col_names = c("T", "p"),
+                            delim = " ") |> mutate(nu = factor(1))
+
+theory_rho_boundary_3 <- read_delim("data/loops_no_groups_rho_boundary_nu_3.txt",
+                            col_names = c("T", "p"),
+                            delim = " ") |> mutate(nu = factor(3))
+
+theory_rho_boundary_2 <- read_delim("data/loops_no_groups_rho_boundary_nu_2.txt",
+                            col_names = c("T", "p"),
+                            delim = " ") |> mutate(nu = factor(2))
+
+theory_rho_boundary_1 <- read_delim("data/loops_no_groups_rho_boundary_nu_1.txt",
+                            col_names = c("T", "p"),
+                            delim = " ") |> mutate(nu = factor(1))
+
+theory_prob_3 <- read_delim("data/prob_loops_no_groups_nu_3.txt",
+                            col_names = c("T", "p"),
+                            delim = " ") |> mutate(nu = factor(3))
+
+theory_prob_2 <- read_delim("data/prob_loops_no_groups_nu_2.txt",
+                            col_names = c("T", "p"),
+                            delim = " ") |> mutate(nu = factor(2))
+
+theory_prob_1 <- read_delim("data/prob_loops_no_groups_nu_1.txt",
                             col_names = c("T", "p"),
                             delim = " ") |> mutate(nu = factor(1))
 
@@ -41,8 +65,17 @@ sims_3 <- read_delim("data/cascade_sizes_t1_01_4_all_loops_no_groups_complex_con
            delim = " ") |> mutate(nu = factor(3)) |>
   mutate(rho = cascade_size/100000)
 
-# A tibble with all three values for nu for the gcc size
-theory_gcc_size <- theory_size_1 |> add_row(theory_size_2) |> add_row(theory_size_3)
+# A tibble with all three values for nu for the gcc size (lower and upper branches)
+theory_gcc_size_subcrit <- theory_size_lower_1 |> add_row(theory_size_lower_2) |> add_row(theory_size_lower_3)
+theory_gcc_size_supcrit <- theory_size_upper_1 |> add_row(theory_size_upper_2) |> add_row(theory_size_upper_3)
+connecting_pts <- theory_gcc_size_supcrit |>
+  group_by(nu) |>
+  slice_min(T, n = 1) |>
+  ungroup()
+
+theory_gcc_size_rho_boundary <- theory_rho_boundary_1 |> add_row(theory_rho_boundary_2) |> add_row(theory_rho_boundary_3) |>
+  bind_rows(connecting_pts) |>
+  arrange(nu, T)
 
 # A tibble with all three values for nu for the gcc prob
 theory_gcc_prob <- theory_prob_1 |> add_row(theory_prob_2) |> add_row(theory_prob_3)
@@ -50,15 +83,21 @@ theory_gcc_prob <- theory_prob_1 |> add_row(theory_prob_2) |> add_row(theory_pro
 sims <- sims_3
 
 size_sims <- sims |>
-  mutate(significant_frac = rho > 0.01) |>
+  mutate(significant_frac = rho > 0.05) |>
   group_by(nu, T, significant_frac) |>
   summarise(giant_component_size = median(rho)) |>
   group_by(nu, T) |>
   summarise(giant_component_size = max(giant_component_size)) |> ungroup()
 
-size_plot <- theory_gcc_size |>
-  ggplot() +
-  geom_line(aes(x = T, y = p, color = nu)) +
+prob_sims <- sims |>
+  mutate(significant_frac = rho > 0.05) |>
+  group_by(nu, T) |>
+  summarise(p = sum(significant_frac) / n()) |> ungroup()
+
+size_plot <- ggplot() +
+  geom_line(data = theory_gcc_size_subcrit, aes(x = T, y = p, color = nu)) +
+  geom_line(data = theory_gcc_size_supcrit, aes(x = T, y = p, color = nu)) +
+  geom_line(data = theory_gcc_size_rho_boundary, aes(x = T, y = p, color = nu), linetype = "dashed") +
   geom_point(data = size_sims, aes(x = T, y = giant_component_size, color = nu)) +
   coord_cartesian(xlim = c(0.01, 0.4),
                   ylim = c(0,1)) +
@@ -90,6 +129,7 @@ size_plot <- theory_gcc_size |>
 prob_plot <- theory_gcc_prob |>
   ggplot() +
   geom_line(aes(x = T, y = p, color = nu)) +
+  geom_point(data = prob_sims, aes(x = T, y = p, color = nu)) +
   coord_cartesian(xlim = c(0.01, 0.4),
                   ylim = c(0,1)) +
   labs(
