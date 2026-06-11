@@ -31,10 +31,15 @@ theory_prob_1 <- read_delim("data/prob_loops_not_groups_nu_1.txt",
                             col_names = c("T", "p"),
                             delim = " ") |> mutate(nu = factor(1))
 
-sims_3 <- read_delim("data/logs_500000/loopsnogroups_nu_3_sims.txt",
+sims_3 <- read_delim("data/logs_2000000/loopsnogroups_nu_3_sims.txt",
                      col_names = c("T", "cascade_size"),
                      delim = " ") |> mutate(nu = factor(3)) |>
-  mutate(rho = cascade_size/500000)
+  mutate(rho = cascade_size/2000000)
+
+sims_3 <- read_delim("data/cascade_sizes_t1_01_4_all_loops_no_groups_complex_contagion.txt",
+           col_names = c("T", "cascade_size"),
+           delim = " ") |> mutate(nu = factor(3)) |>
+  mutate(rho = cascade_size/100000)
 
 # A tibble with all three values for nu for the gcc size
 theory_gcc_size <- theory_size_1 |> add_row(theory_size_2) |> add_row(theory_size_3)
@@ -113,3 +118,4 @@ prob_plot <- theory_gcc_prob |>
   )
 
 size_plot | prob_plot
+
