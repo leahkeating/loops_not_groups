@@ -55,14 +55,19 @@ theory_prob_1 <- read_delim("data/prob_loops_no_groups_nu_1.txt",
                             col_names = c("T", "p"),
                             delim = " ") |> mutate(nu = factor(1))
 
-sims_3 <- read_delim("data/logs_2000000/loopsnogroups_nu_3_sims.txt",
+sims_3 <- read_delim("data/loopsnogroups_nu_3_sims.txt",
                      col_names = c("T", "cascade_size"),
                      delim = " ") |> mutate(nu = factor(3)) |>
-  mutate(rho = cascade_size/2000000)
+  mutate(rho = cascade_size/100000)
 
-sims_3 <- read_delim("data/cascade_sizes_t1_01_4_all_loops_no_groups_complex_contagion.txt",
-           col_names = c("T", "cascade_size"),
-           delim = " ") |> mutate(nu = factor(3)) |>
+sims_2 <- read_delim("data/loopsnogroups_nu_2_sims.txt",
+                     col_names = c("T", "cascade_size"),
+                     delim = " ") |> mutate(nu = factor(2)) |>
+  mutate(rho = cascade_size/100000)
+
+sims_1 <- read_delim("data/loopsnogroups_nu_1_sims.txt",
+                     col_names = c("T", "cascade_size"),
+                     delim = " ") |> mutate(nu = factor(1)) |>
   mutate(rho = cascade_size/100000)
 
 # A tibble with all three values for nu for the gcc size (lower and upper branches)
@@ -80,17 +85,17 @@ theory_gcc_size_rho_boundary <- theory_rho_boundary_1 |> add_row(theory_rho_boun
 # A tibble with all three values for nu for the gcc prob
 theory_gcc_prob <- theory_prob_1 |> add_row(theory_prob_2) |> add_row(theory_prob_3)
 
-sims <- sims_3
+sims <- sims_1 |> add_row(sims_2) |> add_row(sims_3)
 
 size_sims <- sims |>
-  mutate(significant_frac = rho > 0.05) |>
+  mutate(significant_frac = rho > 0.01) |>
   group_by(nu, T, significant_frac) |>
   summarise(giant_component_size = median(rho)) |>
   group_by(nu, T) |>
   summarise(giant_component_size = max(giant_component_size)) |> ungroup()
 
 prob_sims <- sims |>
-  mutate(significant_frac = rho > 0.05) |>
+  mutate(significant_frac = rho > 0.01) |>
   group_by(nu, T) |>
   summarise(p = sum(significant_frac) / n()) |> ungroup()
 
@@ -98,7 +103,7 @@ size_plot <- ggplot() +
   geom_line(data = theory_gcc_size_subcrit, aes(x = T, y = p, color = nu)) +
   geom_line(data = theory_gcc_size_supcrit, aes(x = T, y = p, color = nu)) +
   geom_line(data = theory_gcc_size_rho_boundary, aes(x = T, y = p, color = nu), linetype = "dashed") +
-  geom_point(data = size_sims, aes(x = T, y = giant_component_size, color = nu)) +
+  geom_point(data = size_sims, aes(x = T, y = giant_component_size, color = nu, shape = nu)) +
   coord_cartesian(xlim = c(0.01, 0.4),
                   ylim = c(0,1)) +
   labs(
@@ -129,7 +134,7 @@ size_plot <- ggplot() +
 prob_plot <- theory_gcc_prob |>
   ggplot() +
   geom_line(aes(x = T, y = p, color = nu)) +
-  geom_point(data = prob_sims, aes(x = T, y = p, color = nu)) +
+  geom_point(data = prob_sims, aes(x = T, y = p, color = nu, shape = nu)) +
   coord_cartesian(xlim = c(0.01, 0.4),
                   ylim = c(0,1)) +
   labs(
