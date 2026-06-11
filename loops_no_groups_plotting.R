@@ -60,6 +60,22 @@ sims_3 <- read_delim("data/loopsnogroups_nu_3_sims.txt",
                      delim = " ") |> mutate(nu = factor(3)) |>
   mutate(rho = cascade_size/100000)
 
+sims_3_near_boundary <- read_delim("data/logs_2000000/loopsnogroups_nu_3_sims.txt",
+                     col_names = c("T", "cascade_size"),
+                     delim = " ") |> mutate(nu = factor(3)) |>
+  mutate(rho = cascade_size/2000000)
+
+# thin the near-boundary data to match the T spacing of the 100000-node grid
+T_spacing <- 0.4/30
+near_boundary_T <- sims_3_near_boundary |> distinct(T) |>
+  mutate(bin = round(T / T_spacing)) |>
+  group_by(bin) |>
+  slice_min(abs(T - bin * T_spacing), n = 1) |>
+  pull(T)
+
+sims_3 <- sims_3 |> filter((T < 0.09) | (T > 0.15)) |>
+  add_row(sims_3_near_boundary |> filter(T >= 0.09, T %in% near_boundary_T))
+
 sims_2 <- read_delim("data/loopsnogroups_nu_2_sims.txt",
                      col_names = c("T", "cascade_size"),
                      delim = " ") |> mutate(nu = factor(2)) |>
