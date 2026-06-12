@@ -66,7 +66,7 @@ sims_3_near_boundary <- read_delim("data/logs_2000000/sc_nu_3_sims.txt",
   mutate(rho = cascade_size/2000000)
 
 # thin the near-boundary data to match the T spacing of the 100000-node grid
-T_spacing <- 0.02
+T_spacing <- 0.4/30
 near_boundary_T <- sims_3_near_boundary |> distinct(T) |>
   mutate(bin = round(T / T_spacing)) |>
   group_by(bin) |>
