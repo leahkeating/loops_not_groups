@@ -63,20 +63,25 @@ theory_gcc_size_rho_boundary <- theory_gcc_size_rho_boundary |>
   bind_rows(bottom_pts) |>             # lower end: meet the lower stable branch
   arrange(num_tri, T, desc(p))
 
-# Continuous transitions emanate from Size 0, but the 1e-3 zeroing in the theory
-# leaves the upper branch starting at ~0.001, floating just above the lower line.
-# Bridge each such branch down to 0 at its critical point so it joins the lower
-# branch. Genuinely bistable branches (upper tip well above 0) are left alone.
-continuous_bridge <- theory_gcc_size_supcrit |>
+# Continuous transitions (upper branch emanates from ~0) have no bistable region,
+# so the lower and upper stable branches are really one curve. Merge them into a
+# single line per num_tri so they join cleanly. Bistable branches (upper tip well
+# above 0) keep their separate lower/upper pieces, joined by the dashed branch.
+continuous_nt <- theory_gcc_size_supcrit |>
   group_by(num_tri) |> slice_min(T, n = 1) |> ungroup() |>
-  filter(p < 0.1) |> mutate(p = 0)
-theory_gcc_size_supcrit <- bind_rows(theory_gcc_size_supcrit, continuous_bridge) |>
-  arrange(num_tri, T, p)
+  filter(p < 0.1) |> pull(num_tri)
+theory_gcc_size_continuous <- bind_rows(
+  theory_gcc_size_subcrit |> filter(num_tri %in% continuous_nt),
+  theory_gcc_size_supcrit |> filter(num_tri %in% continuous_nt)
+) |> arrange(num_tri, T)
+theory_gcc_size_subcrit <- theory_gcc_size_subcrit |> filter(!(num_tri %in% continuous_nt))
+theory_gcc_size_supcrit <- theory_gcc_size_supcrit |> filter(!(num_tri %in% continuous_nt))
 
 # A tibble with all three values of num_tri for the gcc prob
 theory_gcc_prob <- theory_prob_1 |> add_row(theory_prob_2) |> add_row(theory_prob_3)
 
 size_plot <- ggplot() +
+  geom_line(data = theory_gcc_size_continuous, aes(x = T, y = p, color = num_tri), linewidth = 1) +
   geom_line(data = theory_gcc_size_subcrit, aes(x = T, y = p, color = num_tri), linewidth = 1) +
   geom_line(data = theory_gcc_size_supcrit, aes(x = T, y = p, color = num_tri), linewidth = 1) +
   geom_line(data = theory_gcc_size_rho_boundary, aes(x = T, y = p, color = num_tri), linetype = "dashed", linewidth = 1) +
