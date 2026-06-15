@@ -1,0 +1,114 @@
+library(tidyverse)
+library(ggplot2)
+library(cowplot)
+library(patchwork)
+library(RColorBrewer)
+theme_set(theme_cowplot())
+
+setwd("/Users/leah/Documents/loops_not_groups/regular_networks")
+
+# Regular networks: curves are parametrised by num_tri (triangles per node),
+# deg = 6. Theory only -- there are no regular-network simulations to overlay.
+read_theory <- function(path, num_tri_val) {
+  read_delim(path,
+             col_names = c("T", "p"),
+             delim = " ",
+             na = c("", "NA", "nan", "NaN"),
+             col_types = "dd") |>
+    mutate(num_tri = factor(num_tri_val))
+}
+
+theory_size_lower_3 <- read_theory("data/size_loops_no_groups_num_tri_3_lower_branch.txt", 3)
+theory_size_lower_2 <- read_theory("data/size_loops_no_groups_num_tri_2_lower_branch.txt", 2)
+theory_size_lower_1 <- read_theory("data/size_loops_no_groups_num_tri_1_lower_branch.txt", 1)
+
+theory_size_upper_3 <- read_theory("data/size_loops_no_groups_num_tri_3_upper_branch.txt", 3)
+theory_size_upper_2 <- read_theory("data/size_loops_no_groups_num_tri_2_upper_branch.txt", 2)
+theory_size_upper_1 <- read_theory("data/size_loops_no_groups_num_tri_1_upper_branch.txt", 1)
+
+theory_rho_boundary_3 <- read_theory("data/loops_no_groups_rho_boundary_num_tri_3.txt", 3)
+theory_rho_boundary_2 <- read_theory("data/loops_no_groups_rho_boundary_num_tri_2.txt", 2)
+theory_rho_boundary_1 <- read_theory("data/loops_no_groups_rho_boundary_num_tri_1.txt", 1)
+
+theory_prob_3 <- read_theory("data/prob_loops_no_groups_num_tri_3.txt", 3)
+theory_prob_2 <- read_theory("data/prob_loops_no_groups_num_tri_2.txt", 2)
+theory_prob_1 <- read_theory("data/prob_loops_no_groups_num_tri_1.txt", 1)
+
+# A tibble with all three values of num_tri for the gcc size (lower and upper branches)
+theory_gcc_size_subcrit <- theory_size_lower_1 |> add_row(theory_size_lower_2) |> add_row(theory_size_lower_3)
+theory_gcc_size_supcrit <- theory_size_upper_1 |> add_row(theory_size_upper_2) |> add_row(theory_size_upper_3)
+connecting_pts <- theory_gcc_size_supcrit |>
+  group_by(num_tri) |>
+  slice_min(T, n = 1) |>
+  ungroup()
+
+theory_gcc_size_rho_boundary <- theory_rho_boundary_1 |> add_row(theory_rho_boundary_2) |> add_row(theory_rho_boundary_3) |>
+  filter(!is.na(p))                    # keep only the bistable region (drop NaN tails)
+# pin the unstable branch to the lower stable branch (Size 0) at the lower fold,
+# so the dashed line meets the flat lower line instead of stopping just above it
+bottom_pts <- theory_gcc_size_rho_boundary |>
+  group_by(num_tri) |> slice_max(T, n = 1) |> ungroup() |> mutate(p = 0)
+theory_gcc_size_rho_boundary <- theory_gcc_size_rho_boundary |>
+  bind_rows(connecting_pts) |>         # upper end: meet the upper stable tip
+  bind_rows(bottom_pts) |>             # lower end: meet the lower stable branch
+  arrange(num_tri, T, desc(p))
+
+# A tibble with all three values of num_tri for the gcc prob
+theory_gcc_prob <- theory_prob_1 |> add_row(theory_prob_2) |> add_row(theory_prob_3)
+
+size_plot <- ggplot() +
+  geom_line(data = theory_gcc_size_subcrit, aes(x = T, y = p, color = num_tri), linewidth = 1) +
+  geom_line(data = theory_gcc_size_supcrit, aes(x = T, y = p, color = num_tri), linewidth = 1) +
+  geom_line(data = theory_gcc_size_rho_boundary, aes(x = T, y = p, color = num_tri), linetype = "dashed", linewidth = 1) +
+  coord_cartesian(xlim = c(0.01, 0.4),
+                  ylim = c(0,1)) +
+  labs(
+    x = expression(T),
+    y = expression("Size"),
+    color = expression(k[Delta])
+  ) +
+  theme_minimal() +
+  scale_color_brewer(palette = "Set2") +  theme(
+    text = element_text(family = "Times"),
+    legend.position = c(0.85, 0.35),  # adjust position as needed
+    legend.title = element_text(hjust = 0.5),
+    legend.background = element_rect(fill = alpha("white", 0.8), color = NA),  # optional: semi-transparent bg
+    legend.key = element_blank(),  # optional: remove legend key border
+    legend.text = element_text(size = 13),
+    panel.grid.major = element_blank(),  # remove major gridlines
+    panel.grid.minor = element_blank(),  # remove minor gridlines
+    panel.background = element_blank(),
+    plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 13),
+    axis.line = element_line(color = "black", size = 0.5)
+  )
+
+prob_plot <- theory_gcc_prob |>
+  ggplot() +
+  geom_line(aes(x = T, y = p, color = num_tri), linewidth = 1) +
+  coord_cartesian(xlim = c(0.01, 0.4),
+                  ylim = c(0,1)) +
+  labs(
+    x = expression(T),
+    y = expression("Probability"),
+    color = expression(k[Delta])
+  ) +
+  theme_minimal() +
+  scale_color_brewer(palette = "Set2") +  theme(
+    text = element_text(family = "Times"),
+    legend.position = c(0.85, 0.35),  # adjust position as needed
+    legend.title = element_text(hjust = 0.5),
+    legend.background = element_rect(fill = alpha("white", 0.8), color = NA),  # optional: semi-transparent bg
+    legend.key = element_blank(),  # optional: remove legend key border
+    legend.text = element_text(size = 13),
+    panel.grid.major = element_blank(),  # remove major gridlines
+    panel.grid.minor = element_blank(),  # remove minor gridlines
+    panel.background = element_blank(),
+    plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 13),
+    axis.line = element_line(color = "black", size = 0.5)
+  )
+
+size_plot | prob_plot
