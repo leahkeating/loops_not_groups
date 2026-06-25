@@ -179,3 +179,4 @@ prob_plot <- theory_gcc_prob |>
   )
 
 size_plot | prob_plot
+

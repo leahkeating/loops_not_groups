@@ -90,7 +90,7 @@ size_plot <- ggplot() +
   labs(
     x = expression(T),
     y = expression("Size"),
-    color = expression(k[Delta])
+    color = expression(k[t])
   ) +
   theme_minimal() +
   scale_color_brewer(palette = "Set2") +  theme(
@@ -117,7 +117,7 @@ prob_plot <- theory_gcc_prob |>
   labs(
     x = expression(T),
     y = expression("Probability"),
-    color = expression(k[Delta])
+    color = expression(k[t])
   ) +
   theme_minimal() +
   scale_color_brewer(palette = "Set2") +  theme(
